@@ -2,9 +2,14 @@ var graphql = require('graphql').graphql,
 	buildSchema = require('graphql').buildSchema;
 
 const mySchema = buildSchema(`
+	type Video {
+		id: ID,
+		title: String,
+		duration: Int,
+		watched: Boolean
+	}
 	type Query {
-		foo: String,
-		bar: String
+		video: Video
 	}
 
 	type Schema {
@@ -14,24 +19,33 @@ const mySchema = buildSchema(`
 
 
 const myResolvers = {
-	foo: () => "Hello Value",
-	bar: () => {
-		// we can also use promises to resolve our queries
-		// for, example, by running a database query
-		return new Promise(function(resolve){
-			setTimeout(function(){
-				resolve('Promise Value: ' + new Date().toISOString())
-			},2000)
-		})
-	}
+	video: () => (
+		{
+			id:  () => 123,
+			title: () => "Wolverine",
+			duration: () => {
+				// we can also use promises to resolve our queries
+				// for, example, by running a database query
+				return new Promise(function(resolve){
+					setTimeout(function(){
+						resolve(3800)
+					},2000)
+				})
+			},
+			watched: () => false
+		}
+	)
 }
 
 
 // In our query we must specify properties that exist in our mySchema.Query
 const myQuery = `
 	query myFirstQuery {
-		foo,
-		bar
+		video {
+			id,
+			title,
+			duration
+		}
 	}
 `
 
