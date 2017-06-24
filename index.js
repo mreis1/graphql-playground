@@ -213,7 +213,16 @@ var VideoConnection = {
 }.connectionType;*/
 
 const { connectionType: VideoConnection } = connectionDefinitions({
-	nodeType: videoType
+	nodeType: videoType,
+	connectionFields: () => ({
+		totalCount: {
+			type: GraphQLInt,
+			description: 'A count of existing total objects in this connection',
+			resolve: (conn) => {
+				return conn.edges.length;
+			}
+		}
+	})
 })
 
 const queryType = new GraphQLObjectType({
