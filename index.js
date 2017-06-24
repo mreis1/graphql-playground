@@ -9,7 +9,8 @@ const mySchema = buildSchema(`
 		watched: Boolean
 	}
 	type Query {
-		video: Video
+		video: Video,
+		videos: [Video]
 	}
 
 	type Schema {
@@ -18,23 +19,28 @@ const mySchema = buildSchema(`
 `)
 
 
+const videoA = {
+	id: 123,
+	watched: true,
+	duration: 1203,
+	title: 'Film A'
+}
+const videoB = {
+	id: 123,
+	watched: true,
+	duration: 1203,
+	title: 'Film B'
+}
+
 const myResolvers = {
-	video: () => (
-		{
-			id:  () => 123,
-			title: () => "Wolverine",
-			duration: () => {
-				// we can also use promises to resolve our queries
-				// for, example, by running a database query
-				return new Promise(function(resolve){
-					setTimeout(function(){
-						resolve(3800)
-					},2000)
-				})
-			},
-			watched: () => false
-		}
-	)
+	video: () => videoA,
+	videos: () => {
+		return new Promise(function(resolve){
+			setTimeout(function(){
+				resolve([videoA, videoB]);
+			},2000)
+		})
+	}
 }
 
 
@@ -42,6 +48,10 @@ const myResolvers = {
 const myQuery = `
 	query myFirstQuery {
 		video {
+			id,
+			title
+		},
+		videos {
 			id,
 			title,
 			duration
@@ -51,5 +61,5 @@ const myQuery = `
 
 
 graphql(mySchema, myQuery, myResolvers)
-.then((res)=>console.log(res))
+.then((res)=>console.log(JSON.stringify(res)))
 .catch(err => console.log(err));
