@@ -13,10 +13,13 @@ var GraphQLString = require('graphql').GraphQLString;
 var GraphQLBoolean = require('graphql').GraphQLBoolean;
 var GraphQLObjectType = require('graphql').GraphQLObjectType;
 var GraphQLNonNull = require('graphql').GraphQLNonNull;
+var GraphQLList = require('graphql').GraphQLList;
 
 /***
+TEST 1: QUERY VIDEO WITH FILTERING BY ID
+
 {
-  video(id:"123") {
+  video(id:123) {
     id,
     title,
     duration
@@ -34,6 +37,39 @@ will produce:
   },
   "extensions": {
     "runTime": 4
+  }
+}
+
+
+
+TEST 2: QUERYING VIDEOS
+
+{
+  videos {
+    id,
+    title,
+    duration
+  }
+}
+
+prints out
+{
+  "data": {
+    "videos": [
+      {
+        "id": "123",
+        "title": "Film A",
+        "duration": 1203
+      },
+      {
+        "id": "124",
+        "title": "Film B",
+        "duration": 1203
+      }
+    ]
+  },
+  "extensions": {
+    "runTime": 2
   }
 }
 */
@@ -82,6 +118,12 @@ const queryType = new GraphQLObjectType({
 	name: 'QueryType',
 	description: 'The root query type.',
 	fields: {
+		videos: {
+			type: new GraphQLList(videoType),
+			resolve: function(){
+				return videos;
+			}
+		},
 		video: {
 			type: videoType,
 			args: {
