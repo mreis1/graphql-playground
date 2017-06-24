@@ -6,45 +6,18 @@ var http = require('http'),
 	buildSchema = require('graphql').buildSchema,
 	graphqlHTTP = require('express-graphql');
 
-var GraphQLID = require('graphql').GraphQLID;
-var GraphQLSchema = require('graphql').GraphQLSchema;
-var GraphQLInt = require('graphql').GraphQLInt;
-var GraphQLString = require('graphql').GraphQLString;
-var GraphQLBoolean = require('graphql').GraphQLBoolean;
-var GraphQLObjectType = require('graphql').GraphQLObjectType;
-var GraphQLNonNull = require('graphql').GraphQLNonNull;
-var GraphQLList = require('graphql').GraphQLList;
-var GraphQLInputObjectType = require('graphql').GraphQLInputObjectType;
+var {   GraphQLID,
+	 	GraphQLSchema,
+	 	GraphQLInt,
+	 	GraphQLString,
+	 	GraphQLBoolean,
+	 	GraphQLObjectType,
+	 	GraphQLNonNull,
+	 	GraphQLList,
+	 	GraphQLInputObjectType,
+	 	GraphQLInterfaceType } = require('graphql');
 /**
-
-
-mutation M {
-  createVideo(video: {
-    title: "Awesome New Video", 
-    watched: true, 
-    duration: 12312
-  }) 
-  {
-   	id,
-    title,
-    duration
-  }
-}
-
-will procude: 
-{
-  "data": {
-    "createVideo": {
-      "id": "536174204a756e20323420323031372031323a35373a343620474d542b3032303020284345535429",
-      "title": "Awesome New Video",
-      "duration": 12312
-    }
-  },
-  "extensions": {
-    "runTime": 5
-  }
-}
-
+add reusability of field types
 */
 
 const videoA = {
@@ -60,6 +33,24 @@ const videoB = {
 	title: 'Film B'
 }
 
+
+const nodeInterface = new GraphQLInterfaceType({
+	name: 'Node',
+	fields: {
+		id: {
+			type: new GraphQLNonNull(GraphQLID)
+		}
+	},
+	resolveType: (object) => {
+		// so we are basically inferring that all 
+		// objects with title property are of type videoType
+		if (object.title){
+			return videoType;
+		}
+
+		return null;
+	}
+})
 const videos = [videoA, videoB]
 
 const videoType = new GraphQLObjectType({
@@ -67,7 +58,9 @@ const videoType = new GraphQLObjectType({
 	description: 'A video',
 	fields: {
 		id: {
-			type: GraphQLID,
+			// Fix: Error: Node.id expects type "ID!" but Video.id provides type "ID".
+			// type: GraphQLID,
+			type: new GraphQLNonNull(GraphQLID), //<--- with this new type it matches the interface and errors are gone!
 			description: 'The video id'
 		},
 		title: {
@@ -82,7 +75,8 @@ const videoType = new GraphQLObjectType({
 			type: GraphQLBoolean,
 			description: 'The video watched state'
 		}
-	}
+	},
+	interfaces: [nodeInterface]
 })
 
 const queryType = new GraphQLObjectType({
