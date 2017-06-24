@@ -12,6 +12,7 @@ var GraphQLInt = require('graphql').GraphQLInt;
 var GraphQLString = require('graphql').GraphQLString;
 var GraphQLBoolean = require('graphql').GraphQLBoolean;
 var GraphQLObjectType = require('graphql').GraphQLObjectType;
+var GraphQLNonNull = require('graphql').GraphQLNonNull;
 
 /***
 {
@@ -85,7 +86,7 @@ const queryType = new GraphQLObjectType({
 			type: videoType,
 			args: {
 				id: {
-					type: GraphQLID,
+					type: new GraphQLNonNull(GraphQLID),
 					description: 'The movie id'
 				}	
 			},
