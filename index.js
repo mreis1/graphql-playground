@@ -1,5 +1,10 @@
-var graphql = require('graphql').graphql,
-	buildSchema = require('graphql').buildSchema;
+var http = require('http'),
+	server = http.createServer(),
+	express = require('express'),
+	app = express(server),
+	graphql = require('graphql').graphql,
+	buildSchema = require('graphql').buildSchema,
+	graphqlHTTP = require('express-graphql');
 
 const mySchema = buildSchema(`
 	type Video {
@@ -60,6 +65,17 @@ const myQuery = `
 `
 
 
-graphql(mySchema, myQuery, myResolvers)
-.then((res)=>console.log(JSON.stringify(res)))
-.catch(err => console.log(err));
+// graphql(mySchema, myQuery, myResolvers)
+// .then((res)=>console.log(JSON.stringify(res)))
+// .catch(err => console.log(err));
+
+
+app.use('/graphql', graphqlHTTP({
+  schema: mySchema,
+  graphiql: true,
+  rootValue: myResolvers
+}));
+
+
+
+app.listen(8080)
