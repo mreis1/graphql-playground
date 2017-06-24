@@ -14,11 +14,17 @@ var GraphQLBoolean = require('graphql').GraphQLBoolean;
 var GraphQLObjectType = require('graphql').GraphQLObjectType;
 var GraphQLNonNull = require('graphql').GraphQLNonNull;
 var GraphQLList = require('graphql').GraphQLList;
-
+var GraphQLInputObjectType = require('graphql').GraphQLInputObjectType;
 /**
 
+
 mutation M {
-  createVideo(title: "Awesome New Video", watched: true, duration: 12312) {
+  createVideo(video: {
+    title: "Awesome New Video", 
+    watched: true, 
+    duration: 12312
+  }) 
+  {
    	id,
     title,
     duration
@@ -26,17 +32,16 @@ mutation M {
 }
 
 will procude: 
-
 {
   "data": {
     "createVideo": {
-      "id": "536174204a756e20323420323031372031323a33373a353820474d542b3032303020284345535429",
+      "id": "536174204a756e20323420323031372031323a35373a343620474d542b3032303020284345535429",
       "title": "Awesome New Video",
       "duration": 12312
     }
   },
   "extensions": {
-    "runTime": 4
+    "runTime": 5
   }
 }
 
@@ -105,6 +110,28 @@ const queryType = new GraphQLObjectType({
 	}
 })
 
+const videoInputType = new GraphQLInputObjectType({
+	name: 'VideoInputType',
+	fields: {
+		// id: {
+		// 	type: new GraphQLNonNull(GraphQLID),
+		// 	description: 'The video id'
+		// },
+		title: {
+			type: new GraphQLNonNull(GraphQLString),
+			description: 'The video title'
+		},
+		duration: {
+			type: new GraphQLNonNull(GraphQLInt),
+			description: 'The video duration'
+		},
+		watched: {
+			type: new GraphQLNonNull(GraphQLBoolean),
+			description: 'The video watched state'
+		}
+	}
+})
+
 const mutationType = new GraphQLObjectType({
 	name: 'Mutation',
 	description: 'The root mutation type.',
@@ -112,25 +139,12 @@ const mutationType = new GraphQLObjectType({
 		createVideo: {
 			type: videoType,
 			args: {
-				// id: {
-				// 	type: new GraphQLNonNull(GraphQLID),
-				// 	description: 'The video id'
-				// },
-				title: {
-					type: new GraphQLNonNull(GraphQLString),
-					description: 'The video title'
-				},
-				duration: {
-					type: new GraphQLNonNull(GraphQLInt),
-					description: 'The video duration'
-				},
-				watched: {
-					type: new GraphQLNonNull(GraphQLBoolean),
-					description: 'The video watched state'
+				video: {
+					type: new GraphQLNonNull(videoInputType)
 				}
 			},
 			resolve: function(_, args){
-				return createVideo(args)
+				return createVideo(args.video)
 			}
 		}
 	}
