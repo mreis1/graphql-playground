@@ -17,58 +17,108 @@ var {   GraphQLID,
 	 	GraphQLInputObjectType,
 	 	GraphQLInterfaceType } = require('graphql');
 /**
-Graphql-relay
+Convert GraphQL List Type to a Relay Connection Type
 
-The GraphQL Relay Specification requires that a GraphQL 
-Schema has some kind of mechanism for re-fetching an object. 
-For typical Relay-compliant servers, this is going to be the
- Node Interface. In this video, we’ll add in the Node
-  interface to a GraphQL Schema by using the helpers 
-  available in the graphql-relay npm package.
+In order to properly traverse through collections,
+Relay-compliant servers require a mechanism to page through
+collections available in a GraphQL Schema. In this video, 
+we’ll create a Connection type from an existing GraphQL List 
+Type and learn how to access edge information from each collection.
 
 
-1. List all videos
+
+// EXAMPLE 1, now we have edges in our collection and that's where
+// we must specify the field properties
+
+{
+  videos{
+    edges{
+    	node{
+        id,
+        title
+      }
+  	}
+  }
+}
+
+// Which outputs:
+
 {
   "data": {
-    "videos": [
-      {
-        "id": "VmlkZW86MTIz",	<--- our ids are now base64 and contain the followin the information about the object and the id itself. For example this id contains  "Video:123" where 123 is the real id        
-        "title": "Film A"
-      },
-      {
-        "id": "VmlkZW86MTI0",
-        "title": "Film B"
+    "videos": {
+      "edges": [
+        {
+          "node": {
+            "id": "VmlkZW86MTIz",
+            "title": "Film A"
+          }
+        },
+        {
+          "node": {
+            "id": "VmlkZW86MTI0",
+            "title": "Film B"
+          }
+        }
+      ]
+    }
+  },
+  "extensions": {
+    "runTime": 2
+  }
+}
+
+
+
+// EXAMPLE 2, But we also have pageInfo
+// which has 4 properties available
+
+{
+  videos{
+    edges{
+    	node{
+        id,
+        title
       }
-    ]
+  	}
+    pageInfo{
+      hasNextPage,
+      hasPreviousPage,
+      startCursor,
+      endCursor
+    }
+  }
+}
+
+
+
+
+{
+  "data": {
+    "videos": {
+      "edges": [
+        {
+          "node": {
+            "id": "VmlkZW86MTIz",
+            "title": "Film A"
+          }
+        },
+        {
+          "node": {
+            "id": "VmlkZW86MTI0",
+            "title": "Film B"
+          }
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": false,
+        "hasPreviousPage": false,
+        "startCursor": "YXJyYXljb25uZWN0aW9uOjA=",
+        "endCursor": "YXJyYXljb25uZWN0aW9uOjE="
+      }
+    }
   },
   "extensions": {
     "runTime": 3
-  }
-}
-
-
-
-
-{
-  node(id:"VmlkZW86MTIz")
-  {
-    ... on Video {
-      title,
-      id
-    }
-  }
-}
-
-will output:
-{
-  "data": {
-    "node": {
-      "title": "Film A",
-      "id": "VmlkZW86MTIz"
-    }
-  },
-  "extensions": {
-    "runTime": 28
   }
 }
 
@@ -91,8 +141,12 @@ const videoB = {
 const {
 	nodeDefinitions,
 	fromGlobalId,
-	globalIdField
+	globalIdField,
+	connectionArgs,
+	connectionFromPromisedArray,
+	connectionDefinitions
 } = require('graphql-relay')
+
 
 
 
@@ -148,16 +202,32 @@ const videoType = new GraphQLObjectType({
 	interfaces: [nodeInterface]
 })
 
+// define our connectionType
+
+/* 
+Just a note about this syntax:
+This is the same 
+
+var VideoConnection = {
+    connectionType: "fooo"
+}.connectionType;*/
+
+const { connectionType: VideoConnection } = connectionDefinitions({
+	nodeType: videoType
+})
+
 const queryType = new GraphQLObjectType({
 	name: 'QueryType',
 	description: 'The root query type.',
 	fields: {
 		node: nodeField,
 		videos: {
-			type: new GraphQLList(videoType),
-			resolve: function(){
-				return videos;
-			}
+			type: VideoConnection,
+			args: connectionArgs,
+			resolve: (_, args) => connectionFromPromisedArray(
+				getVideos(), //a promise that resolves with an array
+				args
+			)
 		},
 		video: {
 			type: videoType,
@@ -238,6 +308,12 @@ const findVideoById = (id) => {
 		})	
 		
 		resolve(video);
+	})
+}
+
+const getVideos = () => {
+	return new Promise((resolve) => {
+		resolve(videos);
 	})
 }
 
