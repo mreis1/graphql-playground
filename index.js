@@ -17,110 +17,44 @@ var {   GraphQLID,
 	 	GraphQLInputObjectType,
 	 	GraphQLInterfaceType } = require('graphql');
 /**
+Use Relay’s Input Object Mutations
+
 Convert GraphQL List Type to a Relay Connection Type
-
-In order to properly traverse through collections,
-Relay-compliant servers require a mechanism to page through
-collections available in a GraphQL Schema. In this video, 
-we’ll create a Connection type from an existing GraphQL List 
-Type and learn how to access edge information from each collection.
-
-
-
-// EXAMPLE 1, now we have edges in our collection and that's where
-// we must specify the field properties
-
-{
-  videos{
-    edges{
-    	node{
-        id,
-        title
-      }
-  	}
-  }
-}
-
-// Which outputs:
-
-{
-  "data": {
-    "videos": {
-      "edges": [
-        {
-          "node": {
-            "id": "VmlkZW86MTIz",
-            "title": "Film A"
-          }
-        },
-        {
-          "node": {
-            "id": "VmlkZW86MTI0",
-            "title": "Film B"
-          }
-        }
-      ]
-    }
-  },
-  "extensions": {
-    "runTime": 2
-  }
-}
+In order to support mutations in Relay, there is a
+requirement that the GraphQL Server exposes mutation 
+fields in a standardized way. This standard includes 
+a way for mutations to accept and emit an identifier string,
+allowing Relay to track mutations and responses. This code
+shows how to use a helper available to us 
+(mutationWithClientMutationId) through 
+graphql-relay to create Mutation fields that accept 
+clientMutationId’s.
 
 
 
-// EXAMPLE 2, But we also have pageInfo
-// which has 4 properties available
-
-{
-  videos{
-    edges{
-    	node{
-        id,
-        title
-      }
-  	}
-    pageInfo{
-      hasNextPage,
-      hasPreviousPage,
-      startCursor,
-      endCursor
+//ATTENTION we use a exclamation point after AddVideoInput
+mutation AddVideoQuery($input: AddVideoInput!){
+  createVideo(input:$input){
+    video{
+      id,
+      title
     }
   }
 }
 
 
-
+with the following query vars
 
 {
-  "data": {
-    "videos": {
-      "edges": [
-        {
-          "node": {
-            "id": "VmlkZW86MTIz",
-            "title": "Film A"
-          }
-        },
-        {
-          "node": {
-            "id": "VmlkZW86MTI0",
-            "title": "Film B"
-          }
-        }
-      ],
-      "pageInfo": {
-        "hasNextPage": false,
-        "hasPreviousPage": false,
-        "startCursor": "YXJyYXljb25uZWN0aW9uOjA=",
-        "endCursor": "YXJyYXljb25uZWN0aW9uOjE="
-      }
-    }
-  },
-  "extensions": {
-    "runTime": 3
+  "input": {
+    "title": "My new movie",
+    "duration": 123213,
+    "watched": true
   }
 }
+
+
+outputs
 
 
 */
@@ -144,7 +78,8 @@ const {
 	globalIdField,
 	connectionArgs,
 	connectionFromPromisedArray,
-	connectionDefinitions
+	connectionDefinitions,
+	mutationWithClientMutationId
 } = require('graphql-relay')
 
 
@@ -253,13 +188,10 @@ const queryType = new GraphQLObjectType({
 	}
 })
 
-const videoInputType = new GraphQLInputObjectType({
-	name: 'VideoInputType',
-	fields: {
-		// id: {
-		// 	type: new GraphQLNonNull(GraphQLID),
-		// 	description: 'The video id'
-		// },
+
+const videoMutation = mutationWithClientMutationId({
+	name: 'AddVideo',
+	inputFields: {
 		title: {
 			type: new GraphQLNonNull(GraphQLString),
 			description: 'The video title'
@@ -272,24 +204,23 @@ const videoInputType = new GraphQLInputObjectType({
 			type: new GraphQLNonNull(GraphQLBoolean),
 			description: 'The video watched state'
 		}
-	}
+	},
+	outputFields: {
+		video: {
+			type: videoType
+		}
+	},
+	mutateAndGetPayload: (args) => new Promise((resolve, reject) => {
+		Promise.resolve(createVideo(args))
+			.then((video) => resolve({ video }))
+			.catch(reject);
+	})
 })
-
 const mutationType = new GraphQLObjectType({
 	name: 'Mutation',
 	description: 'The root mutation type.',
 	fields: {
-		createVideo: {
-			type: videoType,
-			args: {
-				video: {
-					type: new GraphQLNonNull(videoInputType)
-				}
-			},
-			resolve: function(_, args){
-				return createVideo(args.video)
-			}
-		}
+		createVideo: videoMutation
 	}
 })
 
