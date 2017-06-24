@@ -15,24 +15,24 @@ var GraphQLObjectType = require('graphql').GraphQLObjectType;
 var GraphQLNonNull = require('graphql').GraphQLNonNull;
 var GraphQLList = require('graphql').GraphQLList;
 
-/***
-TEST 1: QUERY VIDEO WITH FILTERING BY ID
+/**
 
-{
-  video(id:123) {
-    id,
+mutation M {
+  createVideo(title: "Awesome New Video", watched: true, duration: 12312) {
+   	id,
     title,
     duration
   }
 }
 
-will produce: 
+will procude: 
+
 {
   "data": {
-    "video": {
-      "id": "123",
-      "title": "Film A",
-      "duration": 1203
+    "createVideo": {
+      "id": "536174204a756e20323420323031372031323a33373a353820474d542b3032303020284345535429",
+      "title": "Awesome New Video",
+      "duration": 12312
     }
   },
   "extensions": {
@@ -40,42 +40,7 @@ will produce:
   }
 }
 
-
-
-TEST 2: QUERYING VIDEOS
-
-{
-  videos {
-    id,
-    title,
-    duration
-  }
-}
-
-prints out
-{
-  "data": {
-    "videos": [
-      {
-        "id": "123",
-        "title": "Film A",
-        "duration": 1203
-      },
-      {
-        "id": "124",
-        "title": "Film B",
-        "duration": 1203
-      }
-    ]
-  },
-  "extensions": {
-    "runTime": 2
-  }
-}
 */
-
-
-
 
 const videoA = {
 	id: 123,
@@ -89,6 +54,7 @@ const videoB = {
 	duration: 1203,
 	title: 'Film B'
 }
+
 const videos = [videoA, videoB]
 
 const videoType = new GraphQLObjectType({
@@ -139,11 +105,54 @@ const queryType = new GraphQLObjectType({
 	}
 })
 
-const mySchema = new GraphQLSchema({
-	query: queryType,
-
+const mutationType = new GraphQLObjectType({
+	name: 'Mutation',
+	description: 'The root mutation type.',
+	fields: {
+		createVideo: {
+			type: videoType,
+			args: {
+				// id: {
+				// 	type: new GraphQLNonNull(GraphQLID),
+				// 	description: 'The video id'
+				// },
+				title: {
+					type: new GraphQLNonNull(GraphQLString),
+					description: 'The video title'
+				},
+				duration: {
+					type: new GraphQLNonNull(GraphQLInt),
+					description: 'The video duration'
+				},
+				watched: {
+					type: new GraphQLNonNull(GraphQLBoolean),
+					description: 'The video watched state'
+				}
+			},
+			resolve: function(_, args){
+				return createVideo(args)
+			}
+		}
+	}
 })
 
+const mySchema = new GraphQLSchema({
+	query: queryType,
+	mutation: mutationType
+})
+
+const createVideo = ({title, duration, watched}) => {
+	return new Promise((resolve)=>{
+		let video = {
+			id: new Buffer(new Date().toString()).toString('hex'),
+			title,
+			duration,
+			watched
+		};
+		videos.push(video)
+		resolve(video);
+	})
+}
 const findVideoById = (id) => {
 	return new Promise((resolve)=>{
 		const [video] = videos.filter((video) => {
