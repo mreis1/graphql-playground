@@ -17,7 +17,62 @@ var {   GraphQLID,
 	 	GraphQLInputObjectType,
 	 	GraphQLInterfaceType } = require('graphql');
 /**
-add reusability of field types
+Graphql-relay
+
+The GraphQL Relay Specification requires that a GraphQL 
+Schema has some kind of mechanism for re-fetching an object. 
+For typical Relay-compliant servers, this is going to be the
+ Node Interface. In this video, we’ll add in the Node
+  interface to a GraphQL Schema by using the helpers 
+  available in the graphql-relay npm package.
+
+
+1. List all videos
+{
+  "data": {
+    "videos": [
+      {
+        "id": "VmlkZW86MTIz",	<--- our ids are now base64 and contain the followin the information about the object and the id itself. For example this id contains  "Video:123" where 123 is the real id        
+        "title": "Film A"
+      },
+      {
+        "id": "VmlkZW86MTI0",
+        "title": "Film B"
+      }
+    ]
+  },
+  "extensions": {
+    "runTime": 3
+  }
+}
+
+
+
+
+{
+  node(id:"VmlkZW86MTIz")
+  {
+    ... on Video {
+      title,
+      id
+    }
+  }
+}
+
+will output:
+{
+  "data": {
+    "node": {
+      "title": "Film A",
+      "id": "VmlkZW86MTIz"
+    }
+  },
+  "extensions": {
+    "runTime": 28
+  }
+}
+
+
 */
 
 const videoA = {
@@ -33,36 +88,50 @@ const videoB = {
 	title: 'Film B'
 }
 
+const {
+	nodeDefinitions,
+	fromGlobalId,
+	globalIdField
+} = require('graphql-relay')
 
-const nodeInterface = new GraphQLInterfaceType({
-	name: 'Node',
-	fields: {
-		id: {
-			type: new GraphQLNonNull(GraphQLID)
-		}
-	},
-	resolveType: (object) => {
+
+
+const {nodeInterface, nodeField} = nodeDefinitions(
+	( globalId ) => {
+		const {
+			type, id
+		} = fromGlobalId(globalId);
+		// ex: type=Video, id=124 
+		return getObjectById(type, id);
+	}, ( object ) => {
 		// so we are basically inferring that all 
 		// objects with title property are of type videoType
 		if (object.title){
 			return videoType;
 		}
-
 		return null;
 	}
-})
+)
+
+const getObjectById = (type, id) => {
+	const types = {
+		video: findVideoById,
+	}
+
+	// we receive Video but our types properties are lower case
+	// so we call toLowerCase here, otherwise we would see 
+	// "types[type] is not a function" as error
+	return types[type.toLowerCase()](id);
+}
+
+
 const videos = [videoA, videoB]
 
 const videoType = new GraphQLObjectType({
 	name: 'Video',
 	description: 'A video',
 	fields: {
-		id: {
-			// Fix: Error: Node.id expects type "ID!" but Video.id provides type "ID".
-			// type: GraphQLID,
-			type: new GraphQLNonNull(GraphQLID), //<--- with this new type it matches the interface and errors are gone!
-			description: 'The video id'
-		},
+		id: globalIdField(), // <-- for relay
 		title: {
 			type: GraphQLString,
 			description: 'The video title'
@@ -83,6 +152,7 @@ const queryType = new GraphQLObjectType({
 	name: 'QueryType',
 	description: 'The root query type.',
 	fields: {
+		node: nodeField,
 		videos: {
 			type: new GraphQLList(videoType),
 			resolve: function(){
